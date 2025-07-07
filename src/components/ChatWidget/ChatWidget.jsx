@@ -6,7 +6,7 @@ import LeadDisplay from './components/LeadDisplay';
 import MessageOptions from './components/MessageOptions';
 
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://1db24.lead-ai-chatbot-a801.c66.me';
 
 
 const fadeInOutKeyframes = `
@@ -331,7 +331,7 @@ const ChatWidget = ({
           
           try {
             setIsLoading(true);
-            const formResponse = await fetch('https://dbca-103-163-239-226.ngrok-free.app/form', {
+            const formResponse = await fetch('https://1db24.lead-ai-chatbot-a801.c66.me/form', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
