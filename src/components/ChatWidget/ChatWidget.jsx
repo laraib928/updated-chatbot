@@ -162,10 +162,10 @@ const ChatWidget = ({
 
   // Send current website URL to backend for embedding when widget loads
   useEffect(() => {
-    fetch(`${API_BASE_URL}/start-embedding`, {
+    fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: window.location.origin })
+      body: JSON.stringify({ message: 'Initialize chat with website context', url: window.location.origin })
     })
       .then(res => res.json())
       .then(data => console.log('Embedding response:', data))
@@ -191,7 +191,7 @@ const ChatWidget = ({
   
   const clearChatHistory = useCallback(async () => {
     try {
-      await fetch(`${API_BASE_URL}/clear-chat`, {
+      await fetch(`${API_BASE_URL}/clear_history`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -253,11 +253,106 @@ const ChatWidget = ({
     if (e) e.preventDefault();
     if (!inputValue.trim()) return;
 
+    // Prevent form validation after submission
+    if (hasSubmittedForm) {
+      setFormStep(null); // Ensure formStep is reset
+      setMessages(prev => [
+        ...prev,
+        { type: 'user', text: inputValue }
+      ]);
+      setInputValue('');
+      scrollToBottom({ force: true });
+
+      // Send message to backend as normal chat
+      try {
+        setIsLoading(true);
+        const response = await fetch(`${API_BASE_URL}/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: inputValue,
+            chat_history: messages
+              .filter(m => m.type === 'user' || m.type === 'bot')
+              .map(m => ({
+                role: m.type === 'user' ? 'user' : 'assistant',
+                content: m.text
+              }))
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get bot response');
+        }
+
+        const data = await response.json();
+
+        setMessages(prev => {
+          const newMessages = [...prev];
+          return [
+            ...newMessages,
+            {
+              type: 'bot',
+              text: data.message,
+              ...(data.url && { redirectUrl: data.url }),
+            }
+          ];
+        });
+        scrollToBottom({ force: true });
+      } catch (error) {
+        console.error('Chatbot response error:', error);
+        setMessages(prev => [
+          ...prev,
+          {
+            type: 'bot',
+            text: 'Sorry, I am having trouble connecting right now. Please try again later.'
+          }
+        ]);
+        scrollToBottom({ force: true });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     // checks
     const isValidName = (name) => /^[a-zA-Z\s]{2,}$/.test(name.trim());
     const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     const isValidPhone = (phone) => /^\d{7,15}$/.test(phone.trim());
 
+    // --- BEGIN: Navigation intent detection ---
+    const navPhrases = [
+      /take me to/i,
+      /go to/i,
+      /redirect me/i,
+      /send me to/i,
+      /navigate to/i,
+      /show me/i,
+      /open (the )?/i
+    ];
+    const navTargets = [
+      { key: 'services', pattern: /service(s)?/i, url: '/services', label: 'Services' },
+      { key: 'contact', pattern: /contact/i, url: '/contact', label: 'Contact' },
+      { key: 'pricing', pattern: /pricing|price/i, url: '/pricing', label: 'Pricing' }
+    ];
+    const matchesNavPhrase = navPhrases.some(rgx => rgx.test(inputValue));
+    const matchedTarget = navTargets.find(target => target.pattern.test(inputValue));
+    if (matchesNavPhrase && matchedTarget) {
+      setMessages(prev => [
+        ...prev,
+        { type: 'user', text: inputValue },
+        { type: 'bot', text: `Redirecting you to the ${matchedTarget.label} page...` }
+      ]);
+      setInputValue('');
+      scrollToBottom({ force: true });
+      setTimeout(() => {
+        window.location.href = matchedTarget.url;
+      }, 1500);
+      return;
+    }
+    // --- END: Navigation intent detection ---
+    
     
     setMessages(prev => [...prev, { type: 'user', text: inputValue }]);
     setInputValue('');
@@ -478,7 +573,7 @@ const ChatWidget = ({
       } finally {
         setIsLoading(false);
       }
-    } else {
+    } else { // General chat message handling
       setIsLoading(true);
       setMessages(prev => [...prev, { type: 'bot', text: '', isLoading: true }]);
       scrollToBottom({ force: true });
@@ -489,65 +584,49 @@ const ChatWidget = ({
           headers: {
             'Content-Type': 'application/json',
           },
-          credentials: 'include',
-          body: JSON.stringify({
+          body: JSON.stringify({ 
             message: inputValue,
-            conversation_history: messages.map(msg => ({
-              role: msg.type === 'user' ? 'user' : 'assistant',
-              content: msg.text
-            }))
-          })
+            chat_history: messages
+              .filter(m => m.type === 'user' || m.type === 'bot')
+              .map(m => ({
+                role: m.type === 'user' ? 'user' : 'assistant',
+                content: m.text
+              }))
+          }),
         });
 
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          throw new Error('Failed to get bot response');
         }
 
         const data = await response.json();
 
         setMessages(prev => {
           const newMessages = [...prev];
-          newMessages.pop();
-
-          if (data.type === 'redirect') {
-            setTimeout(() => {
-              window.location.href = data.url;
-            }, 1000);
-
-            return [
-              ...newMessages,
-              { type: 'bot', text: `Redirecting you to ${data.url}...` }
-            ];
-          } else if (data.type === 'text') {
-            return [
-              ...newMessages,
-              { type: 'bot', text: data.message }
-            ];
-          } else {
-            return [
-              ...newMessages,
-              { type: 'bot', text: '⚠️ Unknown response type.' }
-            ];
-          }
+          newMessages.pop(); // Remove loading message
+          return [...newMessages, {
+            type: 'bot',
+            text: data.message,
+            ...(data.url && { redirectUrl: data.url }), // Add redirectUrl if present
+          }];
         });
-
         scrollToBottom({ force: true });
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Chatbot response error:', error);
         setMessages(prev => {
           const newMessages = [...prev];
-          newMessages.pop();
-          return [
-            ...newMessages,
-            { type: 'bot', text: '❌ Failed to fetch response from server.' }
-          ];
+          newMessages.pop(); // Remove loading message
+          return [...newMessages, {
+            type: 'bot',
+            text: 'Sorry, I am having trouble connecting right now. Please try again later.'
+          }];
         });
         scrollToBottom({ force: true });
       } finally {
         setIsLoading(false);
       }
     }
-  }, [formData, formStep, inputValue, messages, scrollToBottom]);
+  }, [formData, formStep, inputValue, messages, scrollToBottom, hasSubmittedForm]);
 
   const handleKeyPress = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
