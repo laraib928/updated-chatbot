@@ -140,7 +140,7 @@ const getInitialMessages = () => {
   return [
     {
       type: 'bot',
-      text: 'Hello! How can I help you today?',
+      text: 'Hello! I\'m here to help you with https://leads4less.io/ services. How can I assist you with our digital marketing solutions today?',
       options: [
         
         'Services',
@@ -288,6 +288,16 @@ const ChatWidget = ({
 
         const data = await response.json();
 
+        if (data && data.type === 'redirect' && data.url) {
+          setMessages(prev => ([
+            ...prev,
+            { type: 'bot', text: 'Redirecting you to the requested page...' }
+          ]));
+          scrollToBottom({ force: true });
+          setTimeout(() => { window.location.href = data.url; }, 1000);
+          return;
+        }
+
         setMessages(prev => {
           const newMessages = [...prev];
           return [
@@ -321,37 +331,7 @@ const ChatWidget = ({
     const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     const isValidPhone = (phone) => /^\d{7,15}$/.test(phone.trim());
 
-    // --- BEGIN: Navigation intent detection ---
-    const navPhrases = [
-      /take me to/i,
-      /go to/i,
-      /redirect me/i,
-      /send me to/i,
-      /navigate to/i,
-      /show me/i,
-      /open (the )?/i
-    ];
-    const navTargets = [
-      { key: 'services', pattern: /service(s)?/i, url: '/services', label: 'Services' },
-      { key: 'contact', pattern: /contact/i, url: '/contact', label: 'Contact' },
-      { key: 'pricing', pattern: /pricing|price/i, url: '/pricing', label: 'Pricing' }
-    ];
-    const matchesNavPhrase = navPhrases.some(rgx => rgx.test(inputValue));
-    const matchedTarget = navTargets.find(target => target.pattern.test(inputValue));
-    if (matchesNavPhrase && matchedTarget) {
-      setMessages(prev => [
-        ...prev,
-        { type: 'user', text: inputValue },
-        { type: 'bot', text: `Redirecting you to the ${matchedTarget.label} page...` }
-      ]);
-      setInputValue('');
-      scrollToBottom({ force: true });
-      setTimeout(() => {
-        window.location.href = matchedTarget.url;
-      }, 1500);
-      return;
-    }
-    // --- END: Navigation intent detection ---
+    // Let the backend handle all navigation intents
     
     
     setMessages(prev => [...prev, { type: 'user', text: inputValue }]);
@@ -601,6 +581,17 @@ const ChatWidget = ({
 
         const data = await response.json();
 
+        if (data && data.type === 'redirect' && data.url) {
+          setMessages(prev => {
+            const newMessages = [...prev];
+            newMessages.pop();
+            return [...newMessages, { type: 'bot', text: 'Redirecting you to the requested page...' }];
+          });
+          scrollToBottom({ force: true });
+          setTimeout(() => { window.location.href = data.url; }, 1000);
+          return;
+        }
+
         setMessages(prev => {
           const newMessages = [...prev];
           newMessages.pop(); // Remove loading message
@@ -729,10 +720,14 @@ const ChatWidget = ({
 
 
     const serviceRedirects = {
-      'Paid Media': '/paid-media',
-      'SEO': '/seo',
-      'E-Commerce': '/e-commerce',
-      'Email Marketing': '/email-marketing'
+      'Paid Media': 'https://leads4less.io/paid-media-1',
+      'SEO': 'https://leads4less.io/seo',
+      'E-Commerce': 'https://leads4less.io/e-commerce',
+      'Email Marketing': 'https://leads4less.io/email-marketing',
+      'Contact': 'https://leads4less.io/contact',
+      'Home': 'https://leads4less.io/',
+      'About': 'https://leads4less.io/',
+      'Pricing': 'https://leads4less.io/'
     };
     
     if (serviceRedirects[option]) {
@@ -853,7 +848,7 @@ const ChatWidget = ({
           }]);
           scrollToBottom({ force: true });
           setTimeout(() => {
-            window.location.href = '/pricing';
+            window.location.href = 'https://leads4less.io/';
           }, 1500);
         }
       } else {
@@ -871,9 +866,9 @@ const ChatWidget = ({
         setTimeout(() => {
           let response = '';
           switch (option) {
-            case 'Ask a Question':
-              response = 'Feel free to ask any question! I\'m here to help.';
-              break;
+                         case 'Ask a Question':
+               response = 'Great! I\'m here to help with https://leads4less.io/ services. Feel free to ask about our SEO, Email Marketing, Paid Media, E-Commerce, or how we can help grow your business!';
+               break;
             default:
               response = 'How can I assist you with that?';
           }
