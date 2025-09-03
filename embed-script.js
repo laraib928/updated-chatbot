@@ -8,8 +8,8 @@
     const config = {
         apiUrl: 'https://1db24.lead-ai-chatbot-a801.c66.me',
         primaryColor: '#6366f1',
-        position: 'bottom-right', // 'bottom-right', 'bottom-left', 'top-right', 'top-left'
-        widgetUrl: 'http://localhost:5173//chat-widget-embed.html' // Replace with your actual widget URL
+        position: 'bottom-right', 
+        widgetUrl: 'https://updated-chatbot-mauve.vercel.app/chat-widget-embed.html'
     };
 
     // Create iframe element
