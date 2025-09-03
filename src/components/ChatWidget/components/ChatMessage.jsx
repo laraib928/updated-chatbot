@@ -4,11 +4,11 @@ import LeadDisplay from './LeadDisplay';
 import MessageOptions from './MessageOptions';
 
 // Memoized TypingIndicator to prevent unnecessary re-renders
-const TypingIndicator = memo(() => {
+const TypingIndicator = memo(({ forceTyping }) => {
   const prefersReducedMotion = useReducedMotion();
   
-  const animation = prefersReducedMotion 
-    ? { opacity: [0.5, 1, 0.5] } 
+  const animation = (!forceTyping && prefersReducedMotion)
+    ? { opacity: [0.5, 1, 0.5] }
     : { y: [0, -5, 0] };
   
   return (
@@ -35,7 +35,7 @@ const TypingIndicator = memo(() => {
 TypingIndicator.displayName = 'TypingIndicator';
 
 // Optimized TypewriterText using useRef instead of state updates for each character
-const TypewriterText = memo(({ text, onComplete, onCharacterUpdate, instant }) => {
+const TypewriterText = memo(({ text, onComplete, onCharacterUpdate, instant, forceTyping }) => {
   const [displayedText, setDisplayedText] = useState(instant ? text : '');
   const timeoutRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
@@ -46,7 +46,7 @@ const TypewriterText = memo(({ text, onComplete, onCharacterUpdate, instant }) =
       if (onComplete) setTimeout(onComplete, 10);
       return;
     }
-    if (prefersReducedMotion) {
+    if (!forceTyping && prefersReducedMotion) {
       setDisplayedText(text);
       if (onComplete) setTimeout(onComplete, 10);
       return;
@@ -75,7 +75,7 @@ const TypewriterText = memo(({ text, onComplete, onCharacterUpdate, instant }) =
         cancelAnimationFrame(timeoutRef.current);
       }
     };
-  }, [text, prefersReducedMotion, onComplete, onCharacterUpdate, instant]);
+  }, [text, prefersReducedMotion, onComplete, onCharacterUpdate, instant, forceTyping]);
   
   return <>{displayedText || ' '}</>;
 });
@@ -97,7 +97,7 @@ const arePropsEqual = (prevProps, nextProps) => {
   );
 };
 
-const ChatMessage = memo(({ message, onOptionClick, onAnimationComplete }) => {
+const ChatMessage = memo(({ message, onOptionClick, onAnimationComplete, forceTyping = true }) => {
   // If animated is false, skip typing animation and show content immediately
   const skipAnimation = message.animated === false;
   const [showTyping, setShowTyping] = useState(
@@ -256,6 +256,7 @@ const ChatMessage = memo(({ message, onOptionClick, onAnimationComplete }) => {
             onOptionClick={onOptionClick}
             onAnimationComplete={onAnimationComplete}
             handleCharacterUpdate={handleCharacterUpdate}
+            forceTyping={forceTyping}
           />
         </motion.div>
       ) : (
@@ -273,6 +274,7 @@ const ChatMessage = memo(({ message, onOptionClick, onAnimationComplete }) => {
             onOptionClick={onOptionClick}
             onAnimationComplete={onAnimationComplete}
             handleCharacterUpdate={handleCharacterUpdate}
+            forceTyping={forceTyping}
           />
         </div>
       )}
@@ -287,13 +289,14 @@ const MessageContent = memo(({
   showContent, 
   onOptionClick, 
   onAnimationComplete,
-  handleCharacterUpdate 
+  handleCharacterUpdate,
+  forceTyping
 }) => {
   return (
     <>
         <div className="relative z-10 break-words whitespace-pre-wrap">
         {message.isLoading || showTyping ? (
-          <TypingIndicator />
+          <TypingIndicator forceTyping={forceTyping} />
           ) : (
             <>
               <p
@@ -309,6 +312,7 @@ const MessageContent = memo(({
                   onComplete={onAnimationComplete}
                   onCharacterUpdate={handleCharacterUpdate}
                   instant={message.animated === false}
+                  forceTyping={forceTyping}
                 />
               ) : (
                 message.text
