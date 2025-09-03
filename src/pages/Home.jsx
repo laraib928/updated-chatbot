@@ -5,6 +5,7 @@ const Home = () => {
     <div className="bg-white min-h-screen">
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-green-100 to-blue-100 py-12 text-center">
+     
         <h1 className="text-4xl md:text-5xl font-extrabold text-green-700 mb-4">Cutting Energy Costs</h1>
         <p className="text-xl md:text-2xl text-gray-700 mb-6">Safe for You, Safe for the Earth!</p>
         <a href="#plans" className="inline-block bg-green-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-green-700 transition">Choose Your Plan</a>
@@ -53,7 +54,9 @@ const Home = () => {
               <li>Long-term maintenance support</li>
             </ul>
             <a href="#" className="text-blue-600 font-semibold hover:underline mt-auto">See Details</a>
+           
           </div>
+          
           {/* Solar Equipment Solutions */}
           <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-start">
             <h3 className="text-2xl font-semibold text-green-700 mb-2">Solar Equipment Solutions</h3>

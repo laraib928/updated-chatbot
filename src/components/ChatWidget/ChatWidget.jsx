@@ -1006,6 +1006,7 @@ const ChatWidget = ({
                       onOptionClick={handleOptionClick}
                       onAnimationComplete={index === messages.length - 1 ? 
                         () => scrollToBottom({ force: true }) : undefined}
+                      forceTyping={true}
                     />
                     {isServiceOptions && (
                       <div className="flex flex-col items-start mt-2 w-full">
