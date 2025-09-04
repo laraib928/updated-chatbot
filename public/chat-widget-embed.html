@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead AI Chat Widget</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.5;
+            color: #1f2937;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        /* Chat Widget Container */
+        .chat-widget-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            font-family: inherit;
+            width: 64px;
+            height: 64px;
+        }
+
+        /* Chat Button - Exact same as React component */
+        .chat-button {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            animation: pulse 2s infinite;
+        }
+
+        .chat-button:hover {
+            transform: scale(1.1) rotate(12deg);
+            box-shadow: 0 20px 25px -5px rgba(124, 58, 237, 0.5), 0 10px 10px -5px rgba(124, 58, 237, 0.2);
+        }
+
+        .chat-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .chat-button:hover::before {
+            left: 100%;
+        }
+
+        .chat-button svg {
+            width: 40px;
+            height: 40px;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+
+        .chat-button:hover svg {
+            transform: scale(1.1);
+        }
+
+        /* Chat Window - Exact same dimensions and styling */
+        .chat-window {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 384px;
+            height: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideIn 0.3s ease-out;
+            z-index: 10000;
+        }
+
+        .chat-window.open {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Chat Header - Exact same as React component */
+        .chat-header {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+            color: white;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 16px 16px 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+            animation: gradient-x 15s ease infinite;
+        }
+
+        @keyframes gradient-x {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .chat-header h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .close-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
+
+        .close-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Chat Messages - Exact same styling as React component */
+        .chat-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background: linear-gradient(to bottom, rgba(249, 250, 251, 0.5), rgba(255, 255, 255, 0.5));
+            backdrop-filter: blur(4px);
+        }
+
+        .message {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message.bot {
+            align-items: flex-start;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 16px;
+            border-radius: 24px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            color: white;
+            border-bottom-right-radius: 8px;
+            box-shadow: 0 4px 15px -3px rgba(59, 130, 246, 0.4);
+        }
+
+        .message.bot .message-content {
+            background: linear-gradient(135deg, #dbeafe, #f3f4f6);
+            color: #1f2937;
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            border-bottom-left-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-content::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.4), rgba(6, 182, 212, 0.4), rgba(59, 130, 246, 0.4));
+            opacity: 0.3;
+            animation: gradient-x 15s ease infinite;
+        }
+
+        .message.user .message-content::before {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.4), rgba(6, 182, 212, 0.4), rgba(59, 130, 246, 0.4));
+        }
+
+        .message.bot .message-content::before {
+            background: linear-gradient(90deg, rgba(219, 234, 254, 0.4), rgba(243, 244, 246, 0.4), rgba(219, 234, 254, 0.4));
+        }
+
+        .message-text {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Message Options - Exact same as React component */
+        .message-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .message-option {
+            background: linear-gradient(135deg, #8b5cf6, #a855f7, #d946ef);
+            color: white;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+            backdrop-filter: blur(4px);
+        }
+
+        .message-option:hover {
+            background: linear-gradient(135deg, #7c3aed, #9333ea, #c026d3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Lead Display - Exact same as React component */
+        .lead-display {
+            margin-top: 12px;
+            padding: 16px;
+            background: linear-gradient(135deg, #eef2ff, #faf5ff);
+            border-radius: 16px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .lead-display h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #7c3aed;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lead-section {
+            margin-bottom: 16px;
+        }
+
+        .lead-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lead-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .lead-item {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: default;
+            transition: all 0.2s ease;
+        }
+
+        .lead-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .copy-button {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .copy-button:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: scale(1.2);
+        }
+
+        /* Chat Input - Exact same as React component */
+        .chat-input-container {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.8);
+            border-top: 1px solid rgba(229, 231, 235, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-input-form {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            padding: 4px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            background: rgba(249, 250, 251, 0.8);
+            color: #1f2937;
+            outline: none;
+            resize: none;
+            min-height: 20px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .chat-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .chat-input:focus {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .microphone-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(243, 244, 246, 0.8);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .microphone-button:hover {
+            background: rgba(229, 231, 235, 0.9);
+            transform: scale(1.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .microphone-button.recording {
+            background: #ef4444;
+            color: white;
+            animation: pulse 1.5s infinite;
+            border-color: transparent;
+        }
+
+        .microphone-button svg {
+            width: 20px;
+            height: 20px;
+            color: #4b5563;
+            transition: transform 0.2s ease;
+        }
+
+        .send-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+        }
+
+        .send-button:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.4);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .send-button svg {
+            width: 18px;
+            height: 18px;
+            color: white;
+        }
+
+        /* Loading indicator */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-radius: 50%;
+            border-top-color: #6366f1;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Typing indicator removed intentionally */
+
+        /* Recording indicator */
+        .recording-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .wave-animation {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            height: 20px;
+        }
+
+        .wave-bar {
+            width: 3px;
+            height: 16px;
+            background: white;
+            border-radius: 2px;
+            animation: wave 1s infinite ease-in-out;
+        }
+
+        .wave-bar:nth-child(1) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes wave {
+            0% { transform: scaleY(0.3); }
+            50% { transform: scaleY(1); }
+            100% { transform: scaleY(0.3); }
+        }
+
+        .recording-time {
+            font-size: 13px;
+            font-weight: 500;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .chat-window {
+                width: calc(100vw - 40px);
+                right: 20px;
+                left: 20px;
+            }
+            
+            .chat-button {
+                width: 56px;
+                height: 56px;
+            }
+        }
+
+        /* Scrollbar */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(229, 231, 235, 0.3);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.7);
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Form step styling */
+        .flex {
+            display: flex;
+        }
+
+        .flex-col {
+            flex-direction: column;
+        }
+
+        .items-start {
+            align-items: flex-start;
+        }
+
+        .mt-2 {
+            margin-top: 0.5rem;
+        }
+
+        .w-full {
+            width: 100%;
+        }
+
+        .bg-gradient-to-br {
+            background: linear-gradient(to bottom right, var(--tw-gradient-stops));
+        }
+
+        .from-gray-100 {
+            --tw-gradient-from: #f3f4f6;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(243, 244, 246, 0));
+        }
+
+        .to-gray-200 {
+            --tw-gradient-to: #e5e7eb;
+        }
+
+        .rounded-2xl {
+            border-radius: 1rem;
+        }
+
+        .px-4 {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .py-3 {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+
+        .mb-3 {
+            margin-bottom: 0.75rem;
+        }
+
+        .shadow {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .text-gray-800 {
+            color: #1f2937;
+        }
+
+        .max-w-\[80\%\] {
+            max-width: 80%;
+        }
+
+        .block {
+            display: block;
+        }
+
+        .text-base {
+            font-size: 1rem;
+            line-height: 1.5rem;
+        }
+
+        .font-medium {
+            font-weight: 500;
+        }
+
+        .mb-1 {
+            margin-bottom: 0.25rem;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+        }
+
+        /* Voice loading states */
+        .pr-10 {
+            padding-right: 2.5rem;
+        }
+
+        .border-2 {
+            border-width: 2px;
+        }
+
+        .border-indigo-400 {
+            border-color: #818cf8;
+        }
+
+        .border-opacity-70 {
+            border-opacity: 0.7;
+        }
+
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .disabled\:pr-10:disabled {
+            padding-right: 2.5rem;
+        }
+
+        .disabled\:border-2:disabled {
+            border-width: 2px;
+        }
+
+        .disabled\:border-indigo-400:disabled {
+            border-color: #818cf8;
+        }
+
+        .disabled\:border-opacity-70:disabled {
+            border-opacity: 0.7;
+        }
+
+        .disabled\:animate-pulse:disabled {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Voice loading spinner */
+        .h-6 {
+            height: 1.5rem;
+        }
+
+        .w-6 {
+            width: 1.5rem;
+        }
+
+        .relative {
+            position: relative;
+        }
+
+        .absolute {
+            position: absolute;
+        }
+
+        .inset-0 {
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+
+        .bg-gradient-to-r {
+            background: linear-gradient(to right, var(--tw-gradient-stops));
+        }
+
+        .from-indigo-500 {
+            --tw-gradient-from: #6366f1;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(99, 102, 241, 0));
+        }
+
+        .via-purple-500 {
+            --tw-gradient-via: #8b5cf6;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to, rgba(139, 92, 246, 0));
+        }
+
+        .to-pink-500 {
+            --tw-gradient-to: #ec4899;
+        }
+
+        .rounded-full {
+            border-radius: 9999px;
+        }
+
+        .opacity-30 {
+            opacity: 0.3;
+        }
+
+        .w-4 {
+            width: 1rem;
+        }
+
+        .h-4 {
+            height: 1rem;
+        }
+
+        .border-t-transparent {
+            border-top-color: transparent;
+        }
+
+        .border-r-indigo-400 {
+            border-right-color: #818cf8;
+        }
+
+        .border-b-purple-500 {
+            border-bottom-color: #8b5cf6;
+        }
+
+        .border-l-pink-500 {
+            border-left-color: #ec4899;
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Flexbox utilities */
+        .flex-1 {
+            flex: 1 1 0%;
+        }
+
+        /* Chat input form improvements */
+        .chat-input-form {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            padding: 4px;
+            position: relative;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            background: rgba(249, 250, 251, 0.8);
+            color: #1f2937;
+            outline: none;
+            resize: none;
+            min-height: 20px;
+            max-height: 120px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .chat-input:disabled {
+            background: rgba(243, 244, 246, 0.8);
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Enhanced message options */
+        .message-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .message-option {
+            background: linear-gradient(135deg, #8b5cf6, #a855f7, #d946ef);
+            color: white;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+            backdrop-filter: blur(4px);
+            white-space: nowrap;
+        }
+
+        .message-option:hover {
+            background: linear-gradient(135deg, #7c3aed, #9333ea, #c026d3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .message-option:active {
+            transform: translateY(0);
+        }
+
+        /* Enhanced lead display */
+        .lead-display {
+            margin-top: 12px;
+            padding: 16px;
+            background: linear-gradient(135deg, #eef2ff, #faf5ff);
+            border-radius: 16px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .lead-display h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #7c3aed;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lead-section {
+            margin-bottom: 16px;
+        }
+
+        .lead-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lead-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .lead-item {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: default;
+            transition: all 0.2s ease;
+        }
+
+        .lead-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .copy-button {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .copy-button:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-widget-container">
+        <!-- Chat Button -->
+        <button class="chat-button" id="chatButton" aria-label="Open chat">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+        </button>
+
+        <!-- Chat Window -->
+        <div class="chat-window" id="chatWindow">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <h3>Chat with us</h3>
+                <button class="close-button" id="closeButton" aria-label="Close chat">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will be inserted here -->
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <form class="chat-input-form" id="chatForm">
+                    <div class="relative flex-1">
+                    <input 
+                        type="text" 
+                        class="chat-input" 
+                        id="chatInput" 
+                        placeholder="Type your message..." 
+                        autocomplete="off"
+                    >
+                    </div>
+                    <button type="button" class="microphone-button" id="microphoneButton">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                            <line x1="12" y1="19" x2="12" y2="23" />
+                            <line x1="8" y1="23" x2="16" y2="23" />
+                        </svg>
+                    </button>
+                    <button type="submit" class="send-button" id="sendButton">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ChatWidget {
+            constructor(config = {}) {
+                this.config = {
+                    apiUrl: config.apiUrl || 'https://1db24.lead-ai-chatbot-a801.c66.me',
+                    primaryColor: config.primaryColor || '#6366f1',
+                    position: config.position || 'bottom-right',
+                    ...config
+                };
+                
+                this.isOpen = false;
+                this.messages = [];
+                this.isLoading = false;
+                this.isRecording = false;
+                this.recordingTime = 0;
+                this.recordingInterval = null;
+                this.mediaRecorder = null;
+                this.audioChunks = [];
+                this.formStep = null;
+                this.formData = { name: '', email: '', phone: '' };
+                this.hasSubmittedForm = false;
+                this.lastClickedOption = '';
+                this.isVoiceLoading = false;
+                
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.addInitialMessage();
+                this.setPosition();
+                this.loadMessagesFromStorage();
+            }
+
+            loadMessagesFromStorage() {
+                try {
+                    const stored = sessionStorage.getItem('chatbot_messages_v1');
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            this.messages = parsed;
+                            // Clear existing messages in DOM first
+                            const messagesContainer = document.getElementById('chatMessages');
+                            messagesContainer.innerHTML = '';
+                            // Render all messages from storage
+                            this.messages.forEach(msg => this.renderMessage(msg));
+                        }
+                    }
+                } catch (e) {
+                    console.log('Could not load stored messages:', e);
+                }
+            }
+
+            saveMessagesToStorage() {
+                try {
+                    if (Array.isArray(this.messages) && this.messages.length > 0) {
+                        const toSave = this.messages.map(({ animated, ...rest }) => rest);
+                        sessionStorage.setItem('chatbot_messages_v1', JSON.stringify(toSave));
+                    }
+                } catch (e) {
+                    console.log('Could not save messages:', e);
+                }
+            }
+
+            setupEventListeners() {
+                // Chat button click
+                document.getElementById('chatButton').addEventListener('click', () => {
+                    this.toggleChat();
+                });
+
+                // Close button click
+                document.getElementById('closeButton').addEventListener('click', () => {
+                    this.closeChat();
+                });
+
+                // Form submit
+                document.getElementById('chatForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.sendMessage();
+                });
+
+                // Input keypress
+                document.getElementById('chatInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+
+                // Microphone button
+                document.getElementById('microphoneButton').addEventListener('click', () => {
+                    this.toggleRecording();
+                });
+
+                // Close on escape key
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.isOpen) {
+                        this.closeChat();
+                    }
+                });
+
+                // Clear chat history on page unload
+                window.addEventListener('beforeunload', () => {
+                    this.clearChatHistory();
+                    sessionStorage.removeItem('chatbot_messages_v1');
+                });
+            }
+
+            async clearChatHistory() {
+                try {
+                    await fetch(`${this.config.apiUrl}/clear_history`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include'
+                    });
+                } catch (error) {
+                    console.error('Failed to clear chat history:', error);
+                }
+            }
+
+            setPosition() {
+                const container = document.querySelector('.chat-widget-container');
+                container.className = `chat-widget-container ${this.config.position}`;
+            }
+
+            toggleChat() {
+                if (this.isOpen) {
+                    this.closeChat();
+                } else {
+                    this.openChat();
+                }
+            }
+
+            openChat() {
+                this.isOpen = true;
+                document.getElementById('chatWindow').classList.add('open');
+                document.getElementById('chatInput').focus();
+                this.scrollToBottom();
+                
+                // Notify parent iframe to resize
+                this.notifyParentResize(true);
+            }
+
+            closeChat() {
+                this.isOpen = false;
+                document.getElementById('chatWindow').classList.remove('open');
+                
+                // Notify parent iframe to resize
+                this.notifyParentResize(false);
+            }
+
+            // Notify parent iframe about size changes
+            notifyParentResize(isOpen) {
+                try {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({
+                            type: 'chat-widget-resize',
+                            isOpen: isOpen
+                        }, '*');
+                    }
+                } catch (error) {
+                    console.log('Could not notify parent iframe:', error);
+                }
+            }
+
+            addInitialMessage() {
+                if (this.messages.length === 0) {
+                const initialMessage = {
+                    type: 'bot',
+                    text: 'Hello! I\'m here to help you with https://leads4less.io/ services. How can I assist you with our digital marketing solutions today?',
+                    options: ['Services', 'contact', 'Pricing']
+                };
+                
+                this.addMessage(initialMessage);
+                }
+            }
+
+            addMessage(message) {
+                // Always append messages, even if text repeats
+                this.messages.push(message);
+                this.renderMessage(message);
+                this.scrollToBottom();
+                this.saveMessagesToStorage();
+            }
+
+            renderMessage(message) {
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${message.type} fade-in`;
+
+                let messageHTML = `
+                    <div class="message-content">
+                        <div class="message-text">
+                            ${message.type === 'bot' ? '<span class="typing-indicator"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>' : ''}
+                            <span class="typed-text" style="display:${message.type === 'bot' ? 'inline' : 'block'}"></span>
+                        </div>
+                    </div>
+                `;
+
+                if (message.options && message.options.length > 0) {
+                    messageHTML += '<div class="message-options">';
+                    message.options.forEach(option => {
+                        messageHTML += `<button class="message-option" onclick="chatWidget.handleOptionClick('${option}')">${option}</button>`;
+                    });
+                    messageHTML += '</div>';
+                }
+
+                if (message.leads) {
+                    messageHTML += this.renderLeadDisplay(message.leads);
+                }
+
+                // Add service options info for service-related messages
+                if (message.type === 'bot' && 
+                    Array.isArray(message.options) && 
+                    message.options.length === 4 &&
+                    message.options.includes('Paid Media') &&
+                    message.options.includes('SEO') &&
+                    message.options.includes('E-Commerce') &&
+                    message.options.includes('Email Marketing')) {
+                    
+                    messageHTML += `
+                        <div class="flex flex-col items-start mt-2 w-full">
+                            <div class="bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl px-4 py-3 mb-3 shadow text-gray-800 max-w-[80%]">
+                                <span class="block text-base font-medium mb-1">Would you like to learn more?</span>
+                                <span class="block text-sm">Contact us and a representative will get back to you as soon as possible.</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                messageElement.innerHTML = messageHTML;
+                messagesContainer.appendChild(messageElement);
+
+                // Typewriter effect for bot messages
+                if (message.type === 'bot') {
+                    const typedContainer = messageElement.querySelector('.typed-text');
+                    const typingIndicator = messageElement.querySelector('.typing-indicator');
+                    const fullText = message.text || '';
+                    const typeSpeedMs = 15; // typing speed per character
+
+                    // If no text, just hide typing indicator
+                    if (!fullText) {
+                        if (typingIndicator) typingIndicator.style.display = 'none';
+                    } else {
+                        let i = 0;
+                        const typeNext = () => {
+                            if (i <= fullText.length) {
+                                typedContainer.textContent = fullText.substring(0, i);
+                                i++;
+                                messagesContainer.scrollTop = messagesContainer.scrollHeight; // keep scrolled to bottom
+                                setTimeout(typeNext, typeSpeedMs);
+                            } else {
+                                if (typingIndicator) typingIndicator.style.display = 'none';
+                            }
+                        };
+                        // Start with indicator visible then type
+                        setTimeout(typeNext, 150);
+                    }
+                } else {
+                    // For user messages, just set the text normally
+                    const typedContainer = messageElement.querySelector('.typed-text');
+                    if (typedContainer) typedContainer.textContent = message.text || '';
+                }
+            }
+
+            renderLeadDisplay(leads) {
+                let html = '<div class="lead-display">';
+                html += '<h4>📊 Lead Generation Results</h4>';
+                
+                if (leads.emails && leads.emails.length > 0) {
+                    html += '<div class="lead-section">';
+                    html += '<div class="lead-section-title">📧 Emails</div>';
+                    html += '<div class="lead-items">';
+                    leads.emails.forEach(email => {
+                        html += `<div class="lead-item">${email}<button class="copy-button" onclick="chatWidget.copyToClipboard('${email}')" title="Copy email">📋</button></div>`;
+                    });
+                    html += '</div></div>';
+                }
+                
+                if (leads.phones && leads.phones.length > 0) {
+                    html += '<div class="lead-section">';
+                    html += '<div class="lead-section-title">📞 Phone Numbers</div>';
+                    html += '<div class="lead-items">';
+                    leads.phones.forEach(phone => {
+                        html += `<div class="lead-item">${phone}<button class="copy-button" onclick="chatWidget.copyToClipboard('${phone}')" title="Copy phone">📋</button></div>`;
+                    });
+                    html += '</div></div>';
+                }
+                
+                if (leads.locations && leads.locations.length > 0) {
+                    html += '<div class="lead-section">';
+                    html += '<div class="lead-section-title">📍 Locations</div>';
+                    html += '<div class="lead-items">';
+                    leads.locations.forEach(location => {
+                        html += `<div class="lead-item">${location}<button class="copy-button" onclick="chatWidget.copyToClipboard('${location}')" title="Copy location">📋</button></div>`;
+                    });
+                    html += '</div></div>';
+                }
+                
+                html += '</div>';
+                return html;
+            }
+
+            copyToClipboard(text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    this.showToast('Copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                });
+            }
+
+            showToast(message) {
+                const toast = document.createElement('div');
+                toast.textContent = message;
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #4f46e5;
+                    color: white;
+                    padding: 12px 16px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    z-index: 10001;
+                    animation: fadeIn 0.3s ease-out;
+                `;
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'fadeOut 0.3s ease-out forwards';
+                    setTimeout(() => {
+                        if (document.body.contains(toast)) {
+                            document.body.removeChild(toast);
+                        }
+                    }, 300);
+                }, 2000);
+            }
+
+            async sendMessage() {
+                const input = document.getElementById('chatInput');
+                const message = input.value.trim();
+                
+                if (!message) return;
+
+                console.log('Sending message:', message, 'Form step:', this.formStep);
+
+                // Add user message
+                this.addMessage({ type: 'user', text: message });
+                input.value = '';
+
+                try {
+                    // Handle form steps FIRST - this is the key fix
+                    if (this.formStep) {
+                        await this.handleFormStep(message);
+                        return;
+                    }
+
+                    // Handle lead generation
+                    if (this.messages[this.messages.length - 1].isLeadGeneration) {
+                        await this.handleLeadGeneration(message);
+                        return;
+                    }
+
+                    // Handle general chat
+                    await this.handleGeneralChat(message);
+
+                } catch (error) {
+                    console.error('Chat error:', error);
+                    
+                    // Add error message
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Sorry, I\'m having trouble connecting right now. Please try again later.'
+                    });
+                }
+            }
+
+            async handleFormStep(message) {
+                console.log('Form step:', this.formStep, 'Message:', message);
+                const isValidName = (name) => /^[a-zA-Z\s]{2,}$/.test(name.trim());
+                const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+                const isValidPhone = (phone) => /^\d{7,15}$/.test(phone.trim());
+
+                switch (this.formStep) {
+                    case 'name':
+                        if (!isValidName(message)) {
+                            this.addMessage({
+                                type: 'bot',
+                                text: 'Please enter a valid name (letters and spaces only, at least 2 characters).',
+                                isFormStep: true
+                            });
+                            return;
+                        }
+                        console.log('Name collected:', message);
+                        this.formData.name = message;
+                        this.formStep = 'email';
+                        this.addMessage({
+                            type: 'bot',
+                            text: 'Please enter your email:',
+                            isFormStep: true
+                        });
+                        break;
+
+                    case 'email':
+                        if (!isValidEmail(message)) {
+                            this.addMessage({
+                                type: 'bot',
+                                text: 'Please enter a valid email address.',
+                                isFormStep: true
+                            });
+                            return;
+                        }
+                        console.log('Email collected:', message);
+                        this.formData.email = message;
+                        this.formStep = 'phone';
+                        this.addMessage({
+                            type: 'bot',
+                                text: 'Please enter your phone number:',
+                                isFormStep: true
+                        });
+                        break;
+
+                    case 'phone':
+                        if (!isValidPhone(message)) {
+                            this.addMessage({
+                                type: 'bot',
+                                text: 'Please enter a valid phone number (7-15 digits, numbers only).',
+                                isFormStep: true
+                            });
+                            return;
+                        }
+                        
+                        console.log('Phone collected:', message);
+                        console.log('Form data to submit:', this.formData);
+                        
+                        const updatedFormData = {
+                            ...this.formData,
+                            phone: message,
+                            message: this.lastClickedOption
+                        };
+
+                        console.log('Submitting form data:', updatedFormData);
+
+                        try {
+                            const formResponse = await fetch('https://1db24.lead-ai-chatbot-a801.c66.me/form', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(updatedFormData),
+                            });
+
+                            console.log('Form response status:', formResponse.status);
+
+                            if (!formResponse.ok) {
+                                throw new Error('Failed to submit form');
+                            }
+
+                            this.hasSubmittedForm = true;
+                            this.formStep = null;
+                            this.formData = { name: '', email: '', phone: '' };
+                            
+                            this.addMessage({
+                                type: 'bot',
+                                text: 'Thanks for contacting us, we will reach you soon.'
+                            });
+                        } catch (error) {
+                            console.error('Form submission error:', error);
+                            this.addMessage({
+                                type: 'bot',
+                                text: 'Sorry, there was an error submitting your information. Please try again later.'
+                            });
+                            this.formStep = null;
+                            this.formData = { name: '', email: '', phone: '' };
+                        }
+                        break;
+
+                    case 'url':
+                        await this.handleLeadGeneration(message);
+                        break;
+                }
+            }
+
+            async handleLeadGeneration(url) {
+                try {
+                    const response = await fetch(`${this.config.apiUrl}/generate-leads`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ url: url }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to generate leads');
+                    }
+
+                    const data = await response.json();
+
+                    if (data.success && data.leads && 
+                        ((data.leads.emails && data.leads.emails.length > 0) || 
+                         (data.leads.phones && data.leads.phones.length > 0) || 
+                         (data.leads.locations && data.leads.locations.length > 0))) {
+                        
+                        this.addMessage({
+                            type: 'bot',
+                            text: 'Here are the leads I found:',
+                            leads: {
+                                emails: data.leads.emails || [],
+                                phones: data.leads.phones || [],
+                                locations: data.leads.locations || []
+                            }
+                        });
+                    } else {
+                        throw new Error(data.error || 'No leads found');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    
+                    this.addMessage({
+                        type: 'bot',
+                        text: `I couldn't find any leads on that website. Please check the URL and try again, or try a different website.`
+                    });
+                } finally {
+                    this.formStep = null;
+                    this.formData = { name: '', email: '', phone: '' };
+                }
+            }
+
+            async handleGeneralChat(message) {
+                    const response = await fetch(`${this.config.apiUrl}/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            chat_history: this.messages
+                                .filter(m => m.type === 'user' || m.type === 'bot')
+                                .map(m => ({
+                                    role: m.type === 'user' ? 'user' : 'assistant',
+                                    content: m.text
+                                }))
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to get response');
+                    }
+
+                    const data = await response.json();
+
+                // Handle redirects
+                if (data && data.type === 'redirect' && data.url) {
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Redirecting you to the requested page...'
+                    });
+                    setTimeout(() => { window.location.href = data.url; }, 1000);
+                    return;
+                }
+
+                    // Add bot response
+                    this.addMessage({
+                        type: 'bot',
+                        text: data.message || 'Sorry, I couldn\'t process that request.',
+                        options: data.options || [],
+                        leads: data.leads || null
+                    });
+            }
+
+            handleOptionClick(option) {
+                console.log('Option clicked:', option);
+                this.lastClickedOption = option;
+                
+                // Add user message for the option
+                this.addMessage({ type: 'user', text: option });
+                
+                // Handle redirects for non-service options
+                const serviceRedirects = {
+                    'Contact': 'https://leads4less.io/contact',
+                    'Home': 'https://leads4less.io/',
+                    'About': 'https://leads4less.io/'
+                };
+                
+                if (serviceRedirects[option]) {
+                    this.addMessage({
+                        type: 'bot',
+                        text: `Redirecting you to the ${option} page...`
+                    });
+                    setTimeout(() => {
+                        window.location.href = serviceRedirects[option];
+                    }, 1500);
+                    return;
+                }
+
+                // Handle Services option
+                if (option === 'Services') {
+                    // Always collect contact information first
+                    this.formStep = 'name';
+                    
+                    // First message: Ask which service
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Which service are you interested in?',
+                        options: ['Paid Media', 'SEO', 'E-Commerce', 'Email Marketing']
+                    });
+                    
+                    // Second message: Ask for name (this should appear immediately below)
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Please enter your name to get started:',
+                        isFormStep: true
+                    });
+                    
+                    return;
+                }
+
+                // Handle individual service options (SEO, E-commerce, etc.)
+                if (['Paid Media', 'SEO', 'E-Commerce', 'Email Marketing'].includes(option)) {
+                    console.log('Service option clicked:', option);
+                    // ALWAYS collect contact information for EVERY service click
+                    this.formStep = 'name';
+                    console.log('Form step set to:', this.formStep);
+                    
+                    // First message: Introduction about the service
+                    this.addMessage({
+                        type: 'bot',
+                        text: `Great choice! I'd love to tell you more about our ${option} services. First, let me get your contact information so we can reach out to you with details.`
+                    });
+                    
+                    // Second message: Ask for name (this should appear immediately below)
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Please enter your name:',
+                        isFormStep: true
+                    });
+                    
+                    console.log('Name prompt added, form step should be:', this.formStep);
+                    return;
+                }
+
+                // Handle contact option
+                if (option === 'contact') {
+                    this.formStep = 'name';
+                    
+                    // First message: Introduction
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Please provide your contact information and we will reach out to you shortly.'
+                    });
+                    
+                    // Second message: Ask for name (this should appear immediately below)
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Please enter your name:',
+                        isFormStep: true
+                    });
+                    
+                    return;
+                }
+
+                // Handle Pricing option
+                if (option === 'Pricing') {
+                    // ALWAYS collect contact information for EVERY pricing click
+                    this.formStep = 'name';
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Please share your contact info, and someone will get back to you with pricing details.'
+                    });
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Please enter your name:',
+                        isFormStep: true
+                    });
+                    return;
+                }
+
+                // Handle other options
+                if (['Book A Demo', 'Generate Leads', 'Leads'].includes(option)) {
+                    // ALWAYS collect contact information for EVERY option click
+                    this.formStep = 'name';
+                    
+                    // First message: Introduction about the option
+                    let introMessage = '';
+                    if (option === 'Book A Demo') {
+                        introMessage = 'Great! Let me get your contact information to schedule a demo.';
+                    } else if (option === 'Generate Leads' || option === 'Leads') {
+                        introMessage = 'Perfect! Let me get your contact information first, then we can generate leads for you.';
+                    }
+                    
+                    this.addMessage({
+                        type: 'bot',
+                        text: introMessage
+                    });
+                    
+                    // Second message: Ask for name (this should appear immediately below)
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Please enter your name:',
+                        isFormStep: true
+                    });
+                    
+                    return;
+                }
+
+                // Handle general options
+                setTimeout(() => {
+                    let response = '';
+                    let shouldCollectInfo = false;
+                    
+                    switch (option) {
+                        case 'Ask a Question':
+                            response = 'Great! I\'m here to help with https://leads4less.io/ services. Feel free to ask about our SEO, Email Marketing, Paid Media, E-Commerce, or how we can help grow your business!';
+                            shouldCollectInfo = true;
+                            break;
+                        default:
+                            response = 'How can I assist you with that?';
+                            shouldCollectInfo = true;
+                    }
+                    
+                    this.addMessage({ type: 'bot', text: response });
+                    
+                    // If we should collect info, ask for name immediately after
+                    if (shouldCollectInfo) {
+                        this.formStep = 'name';
+                        this.addMessage({
+                            type: 'bot',
+                            text: 'Please enter your name:',
+                            isFormStep: true
+                        });
+                    }
+                }, 1000);
+            }
+
+            toggleRecording() {
+                if (this.isRecording) {
+                    this.stopRecording();
+                } else {
+                    this.startRecording();
+                }
+            }
+
+            async startRecording() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.mediaRecorder = new MediaRecorder(stream);
+                    this.audioChunks = [];
+
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        this.audioChunks.push(event.data);
+                    };
+
+                    this.mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+                        const formData = new FormData();
+                        formData.append('audio', audioBlob, 'recording.wav');
+
+                        try {
+                            this.isVoiceLoading = true;
+                            this.updateRecordingUI();
+                            
+                            const response = await fetch(`${this.config.apiUrl}/transcribe`, {
+                                method: 'POST',
+                                mode: 'cors',
+                                credentials: 'include',
+                                body: formData,
+                            });
+
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                            }
+
+                            const data = await response.json();
+                            if (data.text) {
+                                document.getElementById('chatInput').value = data.text;
+                                setTimeout(() => {
+                                    this.sendMessage();
+                                }, 800);
+                            }
+                        } catch (error) {
+                            console.error('Error transcribing audio:', error);
+                            this.addMessage({
+                                type: 'bot',
+                                text: `Sorry, there was an error transcribing your voice message: ${error.message}`
+                            });
+                        } finally {
+                            this.isVoiceLoading = false;
+                            this.updateRecordingUI();
+                        }
+                    };
+
+                    this.mediaRecorder.start();
+                    this.isRecording = true;
+                    this.recordingTime = 0;
+                    this.recordingInterval = setInterval(() => {
+                        this.recordingTime++;
+                        this.updateRecordingUI();
+                    }, 1000);
+
+                    this.updateRecordingUI();
+                } catch (error) {
+                    console.error('Error accessing microphone:', error);
+                    this.addMessage({
+                        type: 'bot',
+                        text: 'Sorry, I could not access your microphone. Please check your permissions.'
+                    });
+                }
+            }
+
+            stopRecording() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                    this.isRecording = false;
+                    clearInterval(this.recordingInterval);
+                    this.updateRecordingUI();
+                }
+            }
+
+            updateRecordingUI() {
+                const micButton = document.getElementById('microphoneButton');
+                const chatInput = document.getElementById('chatInput');
+                
+                if (this.isRecording) {
+                    micButton.classList.add('recording');
+                    micButton.innerHTML = `
+                        <div class="recording-indicator">
+                            <div class="wave-animation">
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                            </div>
+                            <span class="recording-time">${this.formatTime(this.recordingTime)}</span>
+                        </div>
+                    `;
+                } else if (this.isVoiceLoading) {
+                    micButton.classList.remove('recording');
+                    micButton.innerHTML = `
+                        <div class="h-6 w-6 flex items-center justify-center relative">
+                            <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full opacity-30 animate-pulse"></div>
+                            <div class="w-4 h-4 rounded-full border-2 border-t-transparent border-r-indigo-400 border-b-purple-500 border-l-pink-500 animate-spin"></div>
+                        </div>
+                    `;
+                    chatInput.placeholder = "Transcribing your voice...";
+                    chatInput.disabled = true;
+                } else {
+                    micButton.classList.remove('recording');
+                    micButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                            <line x1="12" y1="19" x2="12" y2="23" />
+                            <line x1="8" y1="23" x2="16" y2="23" />
+                        </svg>
+                    `;
+                    chatInput.placeholder = "Type your message...";
+                    chatInput.disabled = false;
+                }
+            }
+
+            formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            scrollToBottom() {
+                const messagesContainer = document.getElementById('chatMessages');
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+
+        // Initialize chat widget when page loads
+        let chatWidget;
+        document.addEventListener('DOMContentLoaded', () => {
+            chatWidget = new ChatWidget({
+                apiUrl: 'https://1db24.lead-ai-chatbot-a801.c66.me',
+                primaryColor: '#6366f1',
+                position: 'bottom-right'
+            });
+        });
+
+        // Make chatWidget globally accessible for option clicks
+        window.chatWidget = chatWidget;
+    </script>
+</body>
+</html>
