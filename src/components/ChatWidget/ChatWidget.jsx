@@ -716,32 +716,29 @@ const ChatWidget = ({
 
     
 
-    // redirectss
-
-
-    const serviceRedirects = {
-      'Paid Media': 'https://leads4less.io/paid-media-1',
-      'SEO': 'https://leads4less.io/seo',
-      'E-Commerce': 'https://leads4less.io/e-commerce',
-      'Email Marketing': 'https://leads4less.io/email-marketing',
-      'Contact': 'https://leads4less.io/contact',
-      'Home': 'https://leads4less.io/',
-      'About': 'https://leads4less.io/',
-      'Pricing': 'https://leads4less.io/'
-    };
-    
-    if (serviceRedirects[option]) {
-      setMessages(prev => [
-        ...prev,
-        {
+    // Handle specific service options - collect info instead of redirecting
+    if (['Paid Media', 'SEO', 'E-Commerce', 'Email Marketing'].includes(option)) {
+      if (hasSubmittedForm) {
+        setMessages(prev => [...prev, {
           type: 'bot',
-          text: `Redirecting you to the ${option} page...`
-        }
-      ]);
+          text: `Great! You're interested in ${option}. How can I help you with this service?`
+        }]);
+      } else {
+        setFormStep('name');
+        setMessages(prev => [
+          ...prev,
+          {
+            type: 'bot',
+            text: `Excellent choice! ${option} is one of our core services. Let me get your contact information so our team can reach out with more details.`
+          },
+          {
+            type: 'bot',
+            text: 'Please enter your name:',
+            isFormStep: true
+          }
+        ]);
+      }
       scrollToBottom({ force: true });
-      setTimeout(() => {
-        window.location.href = serviceRedirects[option];
-      }, 1500);
       return;
     }
 
@@ -812,7 +809,7 @@ const ChatWidget = ({
           ...prev,
           {
             type: 'bot',
-            text: 'Please share your contact info, and someone will get back to you with pricing details.'
+            text: 'Great! I\'d be happy to help you with pricing information. Let me get your contact details so our team can provide you with customized pricing for your needs.'
           },
           {
             type: 'bot',
@@ -825,9 +822,7 @@ const ChatWidget = ({
       return;
     }
 
-    if ([
-      'Book A Demo', 'Pricing', 'Generate Leads', 'Leads'
-    ].includes(option)) {
+    if (['Book A Demo', 'Generate Leads', 'Leads'].includes(option)) {
       if (hasSubmittedForm) {
         setMessages(prev => [...prev, {
           type: 'bot',
@@ -841,21 +836,14 @@ const ChatWidget = ({
             text: 'Please enter the website URL to generate leads:',
             isLeadGeneration: true
           }]);
-        } else if (option === 'Pricing') {
-          setMessages(prev => [...prev, { 
-            type: 'bot', 
-            text: 'Redirecting you to our pricing page...'
-          }]);
-          scrollToBottom({ force: true });
-          setTimeout(() => {
-            window.location.href = 'https://leads4less.io/';
-          }, 1500);
         }
       } else {
         setFormStep('name');
         setMessages(prev => [...prev, {
           type: 'bot',
-          text: 'Please enter your name:',
+          text: option === 'Book A Demo' ? 
+            'Great! Let me get your information to schedule a demo for you.' :
+            'Please enter your name:',
           isFormStep: true
         }]);
       }
